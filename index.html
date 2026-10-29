@@ -175,8 +175,8 @@ body{margin:0}
   <div class="wrap">
     <div class="brand"><h1>Cobros y Servidores</h1><small id="today"></small></div>
     <span class="tag" id="who"></span><button class="btn sm ghost" id="logout" type="button" hidden>Salir</button>
-    <label class="fx" for="tc" title="Tipo de cambio usado para pasar USD a pesos">USD → ARS <input id="tc" inputmode="decimal" aria-label="Tipo de cambio USD a ARS"></label>
-    <nav class="tabs" aria-label="Secciones">
+    <label class="fx" for="tc" id="fxbox" hidden title="Tipo de cambio usado para pasar USD a pesos">USD → ARS <input id="tc" inputmode="decimal" aria-label="Tipo de cambio USD a ARS"></label>
+    <nav class="tabs" aria-label="Secciones" id="tabs" hidden>
       <a href="#resumen" data-v="resumen">Resumen</a>
       <a href="#clientes" data-v="clientes">Clientes</a>
       <a href="#movimientos" data-v="movimientos">Cargos y pagos</a>
@@ -855,6 +855,7 @@ async function start(sb, session){
   if (started) return; started = true;
   $("#app").innerHTML = `<div class="state"><h2>Cargando tu cartera…</h2><p>Clientes, cobros y servidores aparecen acá en unos segundos.</p></div>`;
   $("#who").textContent = session.user.email || ""; $("#logout").hidden = false;
+  $("#tabs").hidden = false; $("#fxbox").hidden = false;
   const db = makeStore(sb); S.db = db; S.canWrite = true; tcInput.disabled = false;
   for (const k of ["clientes","cargos","pagos","servidores"]){
     db.collection(k).onSnapshot(snap => {
