@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Cobros y Servidores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: libro de cuentas operativo — barra superior con pestañas, resumen primero, tablas densas y panel lateral de detalle */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --surface-2:#eaeee9; --line:#d8ddd6; --fg:#18211d; --muted:#5a6660;
+  --accent:#1e6656; --accent-ink:#ffffff; --accent-soft:#dcece7;
+  --ok:#2c7a47; --ok-soft:#e1f1e6; --warn:#9a5c00; --warn-soft:#fbeed6; --bad:#b1261d; --bad-soft:#f9e1de;
+  --shadow:0 10px 30px rgba(20,35,28,.14);
+  --font-sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111614; --surface:#181e1b; --surface-2:#202723; --line:#2d3531; --fg:#e4eae6; --muted:#97a39c;
+  --accent:#62c0a8; --accent-ink:#0c1512; --accent-soft:#1d3530;
+  --ok:#6fc58c; --ok-soft:#1b3123; --warn:#e2a443; --warn-soft:#3a2c14; --bad:#f07d73; --bad-soft:#3d1e1b;
+  --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111614; --surface:#181e1b; --surface-2:#202723; --line:#2d3531; --fg:#e4eae6; --muted:#97a39c;
+  --accent:#62c0a8; --accent-ink:#0c1512; --accent-soft:#1d3530;
+  --ok:#6fc58c; --ok-soft:#1b3123; --warn:#e2a443; --warn-soft:#3a2c14; --bad:#f07d73; --bad-soft:#3d1e1b;
+  --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-sans);font-size:14px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.num,td.num,.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;padding-block:10px}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.01em}
+.brand small{color:var(--muted);font-size:12px}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;order:3;width:100%}
+nav.tabs a{padding:8px 12px;border-radius:6px 6px 0 0;color:var(--muted);text-decoration:none;font-weight:500;white-space:nowrap;border-bottom:2px solid transparent}
+nav.tabs a[aria-current="page"]{color:var(--fg);border-bottom-color:var(--accent)}
+nav.tabs a:hover{color:var(--fg)}
+.fx{display:flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;font-size:12px;color:var(--muted)}
+.fx input{width:86px;border:0;background:transparent;font-family:var(--font-mono);font-size:13px;color:var(--fg);padding:2px 4px;text-align:right}
+.fx input:focus{outline:none;background:var(--surface);border-radius:4px}
+
+main.wrap{padding-block:20px 60px;display:grid;gap:20px}
+.view{display:grid;gap:20px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar h2{font-size:15px;margin:0 auto 0 0;font-weight:600}
+.bar .search{flex:1 1 200px;max-width:320px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap;text-decoration:none;color:var(--fg)}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.danger.solid{background:var(--bad);color:var(--surface)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+input.field,select.field,textarea.field{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 10px}
+textarea.field{min-height:72px;resize:vertical}
+input.field:focus,select.field:focus,textarea.field:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:grid;gap:4px;min-width:0}
+.kpi .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.kpi .val{font-family:var(--font-mono);font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi .sub{font-size:12px;color:var(--muted)}
+.kpi.alert .val{color:var(--bad)}
+
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;min-width:0}
+.panel>.ph{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.panel>.ph h3{margin:0;font-size:13px;font-weight:600;margin-right:auto}
+.panel>.ph .count{font-size:12px;color:var(--muted)}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.list li:last-child{border-bottom:0}
+.list .who{min-width:0;flex:1}
+.list .who b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .who span{font-size:12px;color:var(--muted)}
+.empty{padding:22px 16px;color:var(--muted);text-align:center}
+
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse;min-width:720px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--surface-2);position:sticky;top:0}
+td.num,th.num{text-align:right}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover td{background:var(--surface-2)}
+td .sub{display:block;font-size:12px;color:var(--muted)}
+td.wrapcell{white-space:normal;min-width:160px}
+
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.info{background:var(--accent-soft);color:var(--accent)}
+.neg{color:var(--bad)} .pos{color:var(--ok)}
+.tag{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.demo{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+
+.notice{background:var(--warn-soft);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.notice b{color:var(--warn)}
+
+/* overlay: modal + drawer */
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(10,18,14,.45);display:flex;justify-content:center;align-items:flex-start;padding:max(40px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));overflow-y:auto}
+.modal{background:var(--surface);border-radius:10px;box-shadow:var(--shadow);width:100%;max-width:560px;border:1px solid var(--line)}
+.modal header{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+.modal header h3{margin:0;font-size:15px;margin-right:auto}
+.modal .body{padding:16px 18px;display:grid;gap:12px}
+.modal footer{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:480px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.fld{display:grid;gap:4px;min-width:0}
+.fld.full{grid-column:1/-1}
+.fld label{font-size:12px;font-weight:600;color:var(--muted)}
+.fld .hint{font-size:12px;color:var(--muted)}
+.err{color:var(--bad);font-size:13px}
+
+.overlay.side{justify-content:flex-end;align-items:stretch;padding:0}
+.drawer{background:var(--bg);width:100%;max-width:620px;min-height:100%;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.drawer>header{background:var(--surface);border-bottom:1px solid var(--line);padding:max(14px,calc(env(safe-area-inset-top,0px) + 10px)) max(18px,env(safe-area-inset-right,0px)) 14px 18px;display:grid;gap:10px}
+.drawer>header .row1{display:flex;align-items:flex-start;gap:10px}
+.drawer>header h3{margin:0;font-size:18px}
+.drawer .dbody{padding:16px max(18px,env(safe-area-inset-right,0px)) 40px 18px;display:grid;gap:16px}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+@media (max-width:480px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.facts div{background:var(--surface);padding:10px 12px;min-width:0}
+.facts dt{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.facts dd{margin:2px 0 0;overflow-wrap:anywhere}
+.ledger td{white-space:nowrap}
+.ledger .tipo{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.ledger .tipo.c{color:var(--muted)} .ledger .tipo.p{color:var(--ok)}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+a.ext{color:var(--accent);text-decoration:none;overflow-wrap:anywhere}
+a.ext:hover{text-decoration:underline}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:6px;z-index:40;font-weight:500;box-shadow:var(--shadow)}
+.state{padding:60px 16px;text-align:center;color:var(--muted);display:grid;gap:10px;justify-items:center}
+.state h2{color:var(--fg);margin:0;font-size:17px}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}.modal{animation:pop .14s ease-out}}
+@keyframes slide{from{transform:translateX(24px);opacity:.6}}
+@keyframes pop{from{transform:translateY(6px);opacity:.6}}
+[hidden]{display:none!important}
+body{margin:0}
+.login{max-width:380px;margin:40px auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px;display:grid;gap:14px}
+.login h2{margin:0;font-size:18px}
+.login p{margin:0;color:var(--muted)}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</body>
+</html>
+<script src="/api/config"></script>
+</body>
+</html>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Cobros y Servidores</h1><small id="today"></small></div>
+    <span class="tag" id="who"></span><button class="btn sm ghost" id="logout" type="button" hidden>Salir</button>
+    <label class="fx" for="tc" title="Tipo de cambio usado para pasar USD a pesos">USD → ARS <input id="tc" inputmode="decimal" aria-label="Tipo de cambio USD a ARS"></label>
+    <nav class="tabs" aria-label="Secciones">
+      <a href="#resumen" data-v="resumen">Resumen</a>
+      <a href="#clientes" data-v="clientes">Clientes</a>
+      <a href="#movimientos" data-v="movimientos">Cargos y pagos</a>
+      <a href="#servidores" data-v="servidores">Servidores</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+  <div class="state" id="boot"><h2>Cargando tu cartera…</h2><p>Clientes, cobros y servidores aparecen acá en unos segundos.</p></div>
+</main>
+<div id="layer"></div>
+
+<script>
+(() => {
+"use strict";
+// ---------- utils ----------
+const $ = (s, r=document) => r.querySelector(s);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const todayISO = (() => { const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; })();
+const curPeriod = todayISO.slice(0,7);
+const dayMs = 86400000;
+const daysBetween = (a,b) => Math.round((Date.parse(b)-Date.parse(a))/dayMs); // b - a
+const fmtDate = s => s ? s.slice(8,10)+"/"+s.slice(5,7)+"/"+s.slice(0,4) : "—";
+const fmtMoney = (n, cur="ARS") => (cur==="USD" ? "US$ " : "$ ") + (Number(n)||0).toLocaleString("es-AR",{minimumFractionDigits:0,maximumFractionDigits:2});
+const num = v => { if (v===""||v==null) return null; const n = parseFloat(String(v).replace(/\./g,"").replace(",", ".")); return isFinite(n)?n:NaN; };
+const numSimple = v => { if (v===""||v==null) return null; const s=String(v).trim(); const n = parseFloat(s.includes(",") ? s.replace(/\./g,"").replace(",",".") : s); return isFinite(n)?n:NaN; };
+const addMonths = (iso, m) => { const [y,mo,d]=iso.split("-").map(Number); const t=new Date(Date.UTC(y,mo-1+m,1)); const last=new Date(Date.UTC(t.getUTCFullYear(),t.getUTCMonth()+1,0)).getUTCDate(); return `${t.getUTCFullYear()}-${pad(t.getUTCMonth()+1)}-${pad(Math.min(d,last))}`; };
+const periodLabel = p => { if(!p) return ""; const [y,m]=p.split("-"); return ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][+m-1]+" "+y; };
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
+
+$("#today").textContent = "Hoy " + fmtDate(todayISO);
+
+// ---------- state ----------
+const S = { clientes:new Map(), cargos:new Map(), pagos:new Map(), servidores:new Map(), config:{tipoCambio:1400}, loaded:new Set(), canWrite:true, db:null };
+let view = "resumen";
+let filters = { q:"", mCliente:"", mTipo:"" };
+
+const tc = () => Number(S.config.tipoCambio)||0;
+const toARS = (m, cur) => cur==="USD" ? (Number(m)||0)*tc() : (Number(m)||0);
+const clientesArr = () => [...S.clientes.values()].sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo),"es",{numeric:true}));
+function stats(id){
+  const c = S.clientes.get(id);
+  let cargado=0, pagado=0, ultimo=null;
+  for (const x of S.cargos.values()) if (x.clienteId===id) cargado += Number(x.monto)||0;
+  for (const x of S.pagos.values()) if (x.clienteId===id){ pagado += Number(x.monto)||0; if(!ultimo||x.fecha>ultimo) ultimo=x.fecha; }
+  const saldo = Math.round((cargado-pagado)*100)/100;
+  const dias = ultimo ? daysBetween(ultimo, todayISO) : null;
+  let estadoPago;
+  if (saldo<0) estadoPago = ["info","A favor"];
+  else if (saldo===0) estadoPago = ["ok","Al día"];
+  else if (dias===null || dias>35) estadoPago = ["bad","Atrasado"];
+  else estadoPago = ["warn","Debe"];
+  const cur = c?.moneda||"ARS";
+  const tipo = c?.tipoCobro || "Fijo", usaFijo = tipo!=="Comisión", usaCom = tipo!=="Fijo";
+  let comEst = 0, comN = 0;
+  if (usaCom){ const coms=[...S.cargos.values()].filter(x=>x.clienteId===id && x.tipo==="comision").sort((a,b)=>(b.periodo||"").localeCompare(a.periodo||"")).slice(0,3); comN=coms.length; if(comN) comEst = coms.reduce((a,x)=>a+(Number(x.monto)||0),0)/comN; }
+  const ingreso = c && c.estado==="Activo" ? toARS((usaFijo?Number(c.cuota)||0:0) + comEst, cur) : 0;
+  let costo=0; for (const s of S.servidores.values()) if (s.clienteId===id) costo += toARS(s.costo, s.moneda);
+  return { cargado, pagado, saldo, ultimo, dias, estadoPago, ingreso, costo, margen: ingreso-costo, cur, tipo, usaCom, comEst, comN };
+}
+const pctOf = c => Number(c?.porcentaje)||10;
+function cobroLabel(c){
+  const t = c?.tipoCobro || "Fijo";
+  if (t==="Comisión") return `${pctOf(c).toLocaleString("es-AR")}% de ventas`;
+  if (t==="Fijo + comisión") return `${fmtMoney(c.cuota, c.moneda)} + ${pctOf(c).toLocaleString("es-AR")}%`;
+  return fmtMoney(c.cuota, c.moneda);
+}
+const estadoPill = e => { const m={Activo:"ok",Prueba:"info",Suspendido:"warn",Baja:""}; return `<span class="pill ${m[e]??""}">${esc(e||"—")}</span>`; };
+function duePill(iso){
+  if(!iso) return `<span class="tag">—</span>`;
+  const d = daysBetween(todayISO, iso);
+  const cls = d<0 ? "bad" : d<=15 ? "warn" : "ok";
+  const txt = d<0 ? `vencido hace ${-d} d` : d===0 ? "hoy" : `en ${d} d`;
+  return `<span class="pill ${cls}">${txt}</span>`;
+}
+const nameOf = id => S.clientes.get(id)?.nombre || "Cliente eliminado";
+const demoTag = o => o?.demo ? `<span class="demo">ejemplo</span>` : "";
+
+// ---------- routing ----------
+function setView(v){
+  view = ["resumen","clientes","movimientos","servidores"].includes(v) ? v : "resumen";
+  document.querySelectorAll("nav.tabs a").forEach(a => { if(a.dataset.v===view) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  render();
+}
+window.addEventListener("hashchange", () => setView(location.hash.slice(1)));
+
+// ---------- render ----------
+function render(){
+  const app = $("#app");
+  if (!S.db) return;
+  const ready = ["clientes","cargos","pagos","servidores"].every(k=>S.loaded.has(k));
+  if (!ready) return;
+  const ro = !S.canWrite ? `<div class="notice"><b>Solo lectura.</b> Podés ver la cartera, pero no tenés permiso para modificarla.</div>` : "";
+  const hasDemo = [...S.clientes.values()].some(c=>c.demo);
+  const demo = hasDemo && S.canWrite ? `<div class="notice"><b>Datos de ejemplo.</b> Los clientes marcados como “ejemplo” son de prueba. Cuando cargues los tuyos, borralos desde acá. <button class="btn sm" data-a="borrar-demo">Borrar ejemplos</button></div>` : "";
+  let html = ro + demo;
+  if (view==="resumen") html += vResumen();
+  if (view==="clientes") html += vClientes();
+  if (view==="movimientos") html += vMovimientos();
+  if (view==="servidores") html += vServidores();
+  app.innerHTML = `<div class="view">${html}</div>`;
+  const q = $("#q"); if (q){ q.value = filters.q; }
+  if (drawerId && S.clientes.has(drawerId)) renderDrawer(drawerId);
+}
+
+function vResumen(){
+  const cs = clientesArr();
+  if (!cs.length) return emptyState();
+  let ingreso=0, costo=0, deudaARS=0, conDeuda=[], cobradoMes=0;
+  for (const c of cs){ const st=stats(c.id); ingreso+=st.ingreso; if(st.saldo>0){ deudaARS+=toARS(st.saldo, st.cur); conDeuda.push([c,st]); } }
+  for (const s of S.servidores.values()) costo += toARS(s.costo, s.moneda);
+  for (const p of S.pagos.values()) if ((p.fecha||"").startsWith(curPeriod)) cobradoMes += toARS(p.monto, S.clientes.get(p.clienteId)?.moneda);
+  const margen = ingreso-costo, pct = ingreso ? Math.round(margen/ingreso*1000)/10 : 0;
+  const activos = cs.filter(c=>c.estado==="Activo").length;
+  const nCom = cs.filter(c=>c.estado==="Activo" && (c.tipoCobro||"Fijo")!=="Fijo").length;
+  conDeuda.sort((a,b)=>toARS(b[1].saldo,b[1].cur)-toARS(a[1].saldo,a[1].cur));
+  const venc = [];
+  for (const s of S.servidores.values()){
+    if (s.renovacion){ const d=daysBetween(todayISO,s.renovacion); if(d<=30) venc.push({d, iso:s.renovacion, what:`Renovar ${s.proveedor||"VPS"} ${s.plan||""}`.trim(), s, kind:"vps"}); }
+    if (s.venceDominio){ const d=daysBetween(todayISO,s.venceDominio); if(d<=30) venc.push({d, iso:s.venceDominio, what:`Dominio ${s.dominio||""}`.trim(), s, kind:"dom"}); }
+  }
+  venc.sort((a,b)=>a.d-b.d);
+  const atrasados = conDeuda.filter(([,st])=>st.estadoPago[1]==="Atrasado").length;
+  return `
+  <div class="kpis">
+    <div class="kpi"><span class="lbl">Ingreso mensual esperado</span><span class="val">${fmtMoney(ingreso)}</span><span class="sub">${activos} activo${activos===1?"":"s"}${nCom?` · ${nCom} por comisión, estimado con el promedio de sus últimas 3`:""}</span></div>
+    <div class="kpi"><span class="lbl">Costo de servidores</span><span class="val">${fmtMoney(costo)}</span><span class="sub">${S.servidores.size} servidor${S.servidores.size===1?"":"es"} por mes</span></div>
+    <div class="kpi"><span class="lbl">Margen mensual</span><span class="val ${margen<0?"neg":""}">${fmtMoney(margen)}</span><span class="sub">${pct.toLocaleString("es-AR")}% del ingreso</span></div>
+    <div class="kpi ${deudaARS>0?"alert":""}"><span class="lbl">Deuda total</span><span class="val">${fmtMoney(deudaARS)}</span><span class="sub">${conDeuda.length} con deuda · ${atrasados} atrasado${atrasados===1?"":"s"}</span></div>
+  </div>
+  <div class="cols">
+    <section class="panel">
+      <div class="ph"><h3>Quién debe</h3><span class="count">Cobrado en ${periodLabel(curPeriod)}: <span class="num">${fmtMoney(cobradoMes)}</span></span></div>
+      ${conDeuda.length ? `<ul class="list">${conDeuda.map(([c,st])=>`
+        <li><div class="who"><b>${esc(c.nombre)}${demoTag(c)}</b><span>${st.ultimo?`Último pago hace ${st.dias} d`:"Nunca pagó"} · <span class="pill ${st.estadoPago[0]}">${st.estadoPago[1]}</span></span></div>
+        <span class="num neg">${fmtMoney(st.saldo, st.cur)}</span>
+        <div class="acts"><button class="btn sm ghost" data-a="recordar" data-id="${esc(c.id)}">Recordar</button>${S.canWrite?`<button class="btn sm" data-a="pago" data-id="${esc(c.id)}">Cobrar</button>`:""}</div></li>`).join("")}</ul>`
+        : `<div class="empty">Nadie debe nada. Todos al día.</div>`}
+    </section>
+    <section class="panel">
+      <div class="ph"><h3>Vencimientos próximos</h3><span class="count">próximos 30 días</span></div>
+      ${venc.length ? `<ul class="list">${venc.map(v=>`
+        <li><div class="who"><b>${esc(v.what)}</b><span>${esc(nameOf(v.s.clienteId))} · ${fmtDate(v.iso)}</span></div>
+        ${duePill(v.iso)}
+        ${S.canWrite?`<button class="btn sm ghost" data-a="${v.kind==="vps"?"renovar":"renovar-dom"}" data-id="${esc(v.s.id)}" title="${v.kind==="vps"?"Mover la renovación un mes":"Mover el vencimiento un año"}">${v.kind==="vps"?"Renovado +1 mes":"Renovado +1 año"}</button>`:""}</li>`).join("")}</ul>`
+        : `<div class="empty">Nada vence en los próximos 30 días.</div>`}
+    </section>
+  </div>`;
+}
+
+function emptyState(){
+  return `<div class="state"><h2>Todavía no hay clientes</h2><p>Agregá tu primer cliente para empezar a registrar sus cuotas, pagos y servidor.</p>${S.canWrite?`<button class="btn primary" data-a="nuevo-cliente">Agregar cliente</button>`:""}</div>`;
+}
+
+function vClientes(){
+  const q = filters.q.trim().toLowerCase();
+  const cs = clientesArr().filter(c => !q || [c.codigo,c.nombre,c.contacto,c.plan].some(v=>String(v||"").toLowerCase().includes(q)));
+  const rows = cs.map(c => { const st=stats(c.id); return `
+    <tr class="click" data-a="abrir" data-id="${esc(c.id)}">
+      <td class="mono">${esc(c.codigo)}</td>
+      <td><b>${esc(c.nombre)}</b>${demoTag(c)}<span class="sub">${esc(c.contacto||"")}</span></td>
+      <td>${esc(c.plan||"—")}<span class="sub">cobra el día ${esc(c.diaCobro||"—")}</span></td>
+      <td class="num">${cobroLabel(c)}${st.usaCom?`<span class="sub">${st.comN?`prom. ${fmtMoney(st.comEst, st.cur)}`:"sin comisiones cargadas"}</span>`:""}</td>
+      <td>${estadoPill(c.estado)}</td>
+      <td class="num ${st.saldo>0?"neg":st.saldo<0?"pos":""}">${fmtMoney(st.saldo, st.cur)}<span class="sub"><span class="pill ${st.estadoPago[0]}">${st.estadoPago[1]}</span></span></td>
+      <td>${st.ultimo?fmtDate(st.ultimo):"—"}<span class="sub">${st.dias!=null?`hace ${st.dias} d`:"sin pagos"}</span></td>
+      <td class="num ${st.margen<0?"neg":""}">${fmtMoney(st.margen)}</td>
+      <td>${S.canWrite?`<button class="btn sm" data-a="pago" data-id="${esc(c.id)}">Cobrar</button>`:""}</td>
+    </tr>`; }).join("");
+  return `
+  <div class="bar"><h2>Clientes <span class="tag">${S.clientes.size}</span></h2>
+    <input class="field search" id="q" type="search" placeholder="Buscar por nombre, código o plan" aria-label="Buscar clientes">
+    ${S.canWrite?`<button class="btn primary" data-a="nuevo-cliente">Nuevo cliente</button>`:""}</div>
+  ${S.clientes.size ? `<div class="tablebox"><table>
+    <thead><tr><th>Código</th><th>Cliente</th><th>Plan</th><th class="num">Cobro</th><th>Estado</th><th class="num">Saldo</th><th>Último pago</th><th class="num">Margen / mes</th><th></th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="9" class="empty">Ningún cliente coincide con “${esc(filters.q)}”.</td></tr>`}</tbody></table></div>` : emptyState()}`;
+}
+
+function vMovimientos(){
+  const items = [];
+  for (const x of S.cargos.values()) items.push({...x, tipo:"c"});
+  for (const x of S.pagos.values()) items.push({...x, tipo:"p"});
+  const f = items.filter(x => (!filters.mCliente || x.clienteId===filters.mCliente) && (!filters.mTipo || x.tipo===filters.mTipo))
+    .sort((a,b)=> (b.fecha||"").localeCompare(a.fecha||"") || (a.tipo===b.tipo?0:a.tipo==="p"?-1:1));
+  const opts = clientesArr().map(c=>`<option value="${esc(c.id)}" ${filters.mCliente===c.id?"selected":""}>${esc(c.codigo)} · ${esc(c.nombre)}</option>`).join("");
+  const rows = f.map(x => { const cur=S.clientes.get(x.clienteId)?.moneda||"ARS"; return `
+    <tr>
+      <td>${fmtDate(x.fecha)}</td>
+      <td><span class="pill ${x.tipo==="p"?"ok":""}">${x.tipo==="p"?"Pago":"Cargo"}</span></td>
+      <td>${esc(nameOf(x.clienteId))}${demoTag(x)}</td>
+      <td class="wrapcell">${x.tipo==="c" ? esc(x.concepto||"")+(x.periodo?` <span class="tag">${periodLabel(x.periodo)}</span>`:"") : esc(x.medio||"")+(x.nota?` <span class="sub">${esc(x.nota)}</span>`:"")}</td>
+      <td class="num ${x.tipo==="p"?"pos":""}">${x.tipo==="p"?"− ":""}${fmtMoney(x.monto, cur)}</td>
+      <td>${S.canWrite?`<div class="acts"><button class="btn sm ghost" data-a="${x.tipo==="p"?"editar-pago":"editar-cargo"}" data-id="${esc(x.id)}">Editar</button></div>`:""}</td>
+    </tr>`; }).join("");
+  return `
+  <div class="bar"><h2>Cargos y pagos</h2>
+    <select class="field" id="mCliente" style="width:auto;max-width:240px" aria-label="Filtrar por cliente"><option value="">Todos los clientes</option>${opts}</select>
+    <select class="field" id="mTipo" style="width:auto" aria-label="Filtrar por tipo"><option value="">Cargos y pagos</option><option value="c" ${filters.mTipo==="c"?"selected":""}>Solo cargos</option><option value="p" ${filters.mTipo==="p"?"selected":""}>Solo pagos</option></select>
+    ${S.canWrite?`<button class="btn" data-a="generar">Generar cuotas del mes</button><button class="btn" data-a="comision">Cargar comisión</button><button class="btn" data-a="cargo">Nuevo cargo</button><button class="btn primary" data-a="pago">Registrar pago</button>`:""}
+  </div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Cliente</th><th>Detalle</th><th class="num">Monto</th><th></th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="6" class="empty">No hay movimientos con estos filtros.</td></tr>`}</tbody></table></div>`;
+}
+
+function vServidores(){
+  const ss = [...S.servidores.values()].sort((a,b)=>(a.renovacion||"9").localeCompare(b.renovacion||"9"));
+  const rows = ss.map(s=>`
+    <tr>
+      <td><b>${esc(nameOf(s.clienteId))}</b>${demoTag(s)}<span class="sub mono">${esc(S.clientes.get(s.clienteId)?.codigo||"")}</span></td>
+      <td>${esc(s.proveedor||"—")}<span class="sub">${esc(s.plan||"")}</span></td>
+      <td class="mono">${esc(s.host||"—")}</td>
+      <td class="num">${fmtMoney(s.costo, s.moneda)}${s.moneda==="USD"?`<span class="sub">${fmtMoney(toARS(s.costo,"USD"))}</span>`:""}</td>
+      <td>${fmtDate(s.renovacion)}<span class="sub">${duePill(s.renovacion)}</span></td>
+      <td>${esc(s.dominio||"—")}<span class="sub">${s.venceDominio?fmtDate(s.venceDominio)+" · "+duePill(s.venceDominio):""}</span></td>
+      <td>${S.canWrite?`<div class="acts"><button class="btn sm" data-a="renovar" data-id="${esc(s.id)}" title="Mover la próxima renovación un mes">Renovado</button><button class="btn sm ghost" data-a="editar-srv" data-id="${esc(s.id)}">Editar</button></div>`:""}</td>
+    </tr>`).join("");
+  let total=0; for(const s of ss) total+=toARS(s.costo,s.moneda);
+  return `
+  <div class="bar"><h2>Servidores <span class="tag">${ss.length} · ${fmtMoney(total)} / mes</span></h2>
+    ${S.canWrite?`<button class="btn primary" data-a="nuevo-srv">Nuevo servidor</button>`:""}</div>
+  <div class="tablebox"><table>
+    <thead><tr><th>Cliente</th><th>Proveedor</th><th>Host / IP</th><th class="num">Costo / mes</th><th>Próxima renovación</th><th>Dominio</th><th></th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="7" class="empty">Todavía no cargaste servidores. Agregá el VPS de cada cliente para ver costos y renovaciones.</td></tr>`}</tbody></table></div>`;
+}
+
+// ---------- drawer (detalle de cliente) ----------
+let drawerId = null;
+function openDrawer(id){ drawerId=id; renderDrawer(id); }
+function closeLayer(){ $("#layer").innerHTML=""; drawerId=null; }
+function renderDrawer(id){
+  const c = S.clientes.get(id); if(!c){ closeLayer(); return; }
+  const st = stats(id), cur = st.cur;
+  const mov = [];
+  for (const x of S.cargos.values()) if (x.clienteId===id) mov.push({...x,tipo:"c"});
+  for (const x of S.pagos.values()) if (x.clienteId===id) mov.push({...x,tipo:"p"});
+  mov.sort((a,b)=>(a.fecha||"").localeCompare(b.fecha||"") || (a.tipo==="c"?-1:1));
+  let run=0; const lrows = mov.map(x=>{ run += x.tipo==="c" ? (Number(x.monto)||0) : -(Number(x.monto)||0); return {x, run}; }).reverse().map(({x,run})=>`
+    <tr><td>${fmtDate(x.fecha)}</td><td><span class="tipo ${x.tipo}">${x.tipo==="c"?"Cargo":"Pago"}</span></td>
+    <td class="wrapcell">${x.tipo==="c"?esc(x.concepto||""):esc(x.medio||"")}${x.nota?` <span class="sub">${esc(x.nota)}</span>`:""}</td>
+    <td class="num">${x.tipo==="c"?fmtMoney(x.monto,cur):""}</td><td class="num pos">${x.tipo==="p"?fmtMoney(x.monto,cur):""}</td>
+    <td class="num ${run>0?"neg":""}">${fmtMoney(Math.round(run*100)/100,cur)}</td></tr>`).join("");
+  const srvs = [...S.servidores.values()].filter(s=>s.clienteId===id);
+  const phone = String(c.telefono||"").replace(/\D/g,"");
+  $("#layer").innerHTML = `<div class="overlay side" data-close>
+    <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dtitle">
+      <header>
+        <div class="row1"><div style="flex:1;min-width:0"><span class="tag">${esc(c.codigo)}</span> ${estadoPill(c.estado)} ${demoTag(c)}<h3 id="dtitle">${esc(c.nombre)}</h3></div>
+          <button class="btn ghost sm" data-close aria-label="Cerrar">Cerrar</button></div>
+        <div class="acts">
+          ${S.canWrite?`<button class="btn primary sm" data-a="pago" data-id="${esc(id)}">Registrar pago</button>${st.usaCom?`<button class="btn sm" data-a="comision" data-id="${esc(id)}">Cargar comisión</button>`:""}<button class="btn sm" data-a="cargo" data-id="${esc(id)}">Agregar cargo</button>`:""}
+          <button class="btn sm" data-a="recordar" data-id="${esc(id)}">Recordatorio</button>
+          ${c.panelUrl?`<a class="btn sm" href="${esc(c.panelUrl)}" target="_blank" rel="noopener">Abrir panel ↗</a>`:""}
+          ${S.canWrite?`<button class="btn sm ghost" data-a="editar-cliente" data-id="${esc(id)}">Editar</button><button class="btn sm ghost danger" data-a="borrar-cliente" data-id="${esc(id)}">Eliminar</button>`:""}
+        </div>
+      </header>
+      <div class="dbody">
+        <dl class="facts" style="margin:0">
+          <div><dt>Saldo</dt><dd class="num ${st.saldo>0?"neg":st.saldo<0?"pos":""}">${fmtMoney(st.saldo,cur)}</dd></div>
+          <div><dt>Cobro</dt><dd class="num">${cobroLabel(c)}${st.usaCom&&st.comN?` <span class="tag">(prom. ${fmtMoney(st.comEst,cur)})</span>`:""}</dd></div>
+          <div><dt>Margen / mes</dt><dd class="num ${st.margen<0?"neg":""}">${fmtMoney(st.margen)}</dd></div>
+          <div><dt>Último pago</dt><dd>${st.ultimo?fmtDate(st.ultimo)+` <span class="tag">(${st.dias} d)</span>`:"—"}</dd></div>
+          <div><dt>Día de cobro</dt><dd>${esc(c.diaCobro||"—")}</dd></div>
+          <div><dt>Plan</dt><dd>${esc(c.plan||"—")}</dd></div>
+          <div><dt>Contacto</dt><dd>${esc(c.contacto||"—")}</dd></div>
+          <div><dt>Teléfono</dt><dd class="mono">${esc(c.telefono||"—")}</dd></div>
+          <div><dt>Tenant OpenObserve</dt><dd class="mono">${esc(c.tenant||c.codigo)}</dd></div>
+          ${c.panelUrl?`<div style="grid-column:1/-1"><dt>Panel</dt><dd><a class="ext" href="${esc(c.panelUrl)}" target="_blank" rel="noopener">${esc(c.panelUrl)}</a></dd></div>`:""}
+          ${c.notas?`<div style="grid-column:1/-1"><dt>Notas</dt><dd>${esc(c.notas)}</dd></div>`:""}
+        </dl>
+        <section class="panel">
+          <div class="ph"><h3>Cuenta corriente</h3><span class="count">${mov.length} movimiento${mov.length===1?"":"s"}</span></div>
+          ${mov.length?`<div style="overflow-x:auto"><table class="ledger" style="min-width:520px"><thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th class="num">Cargo</th><th class="num">Pago</th><th class="num">Saldo</th></tr></thead><tbody>${lrows}</tbody></table></div>`:`<div class="empty">Sin movimientos. Usá “Generar cuotas del mes” o agregá un cargo.</div>`}
+        </section>
+        <section class="panel">
+          <div class="ph"><h3>Servidores</h3>${S.canWrite?`<button class="btn sm" data-a="nuevo-srv" data-id="${esc(id)}">Agregar</button>`:""}</div>
+          ${srvs.length?`<ul class="list">${srvs.map(s=>`<li><div class="who"><b>${esc(s.proveedor||"VPS")} ${esc(s.plan||"")}</b><span class="mono">${esc(s.host||"")}</span> <span>${esc(s.dominio||"")}</span></div><span class="num">${fmtMoney(s.costo,s.moneda)}</span>${duePill(s.renovacion)}${S.canWrite?`<button class="btn sm ghost" data-a="editar-srv" data-id="${esc(s.id)}">Editar</button>`:""}</li>`).join("")}</ul>`:`<div class="empty">Sin servidor cargado.</div>`}
+        </section>
+      </div>
+    </aside></div>`;
+}
+
+// ---------- forms ----------
+function modal({title, bodyHTML, footHTML}){
+  const prev = drawerId ? $("#layer").innerHTML : null;
+  const host = document.createElement("div");
+  host.innerHTML = `<div class="overlay" data-mclose><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+    <header><h3 id="mtitle">${esc(title)}</h3><button class="btn ghost sm" data-mclose aria-label="Cerrar">Cerrar</button></header>
+    <div class="body">${bodyHTML}</div><footer>${footHTML}</footer></div></div>`;
+  document.body.appendChild(host);
+  const close = () => host.remove();
+  host.addEventListener("click", e => { if (e.target.matches("[data-mclose]")) close(); });
+  host.addEventListener("keydown", e => { if (e.key==="Escape") close(); });
+  setTimeout(()=>host.querySelector("input,select,textarea,button.primary")?.focus(), 30);
+  return { host, close };
+}
+function fieldHTML(f, v){
+  const id = "f_"+f.k, req = f.req ? " required" : "";
+  const val = v ?? f.def ?? "";
+  let input;
+  if (f.type==="select") input = `<select class="field" id="${id}" name="${f.k}"${req}>${(f.options||[]).map(o=>{ const [ov,ol]=Array.isArray(o)?o:[o,o]; return `<option value="${esc(ov)}" ${String(ov)===String(val)?"selected":""}>${esc(ol)}</option>`; }).join("")}</select>`;
+  else if (f.type==="textarea") input = `<textarea class="field" id="${id}" name="${f.k}">${esc(val)}</textarea>`;
+  else input = `<input class="field" id="${id}" name="${f.k}" type="${f.type==="number"?"text":f.type||"text"}" ${f.type==="number"?'inputmode="decimal"':""} value="${esc(f.type==="number" && val!=="" ? String(val).replace(".",",") : val)}" ${f.ph?`placeholder="${esc(f.ph)}"`:""} ${f.ro?"readonly":""}${req}>`;
+  return `<div class="fld ${f.full?"full":""}"><label for="${id}">${esc(f.label)}${f.req?" *":""}</label>${input}${f.hint!==undefined?`<span class="hint" id="h_${f.k}">${esc(f.hint)}</span>`:""}</div>`;
+}
+function openForm({title, fields, values={}, submit="Guardar", onSubmit, extraFoot="", after}){
+  const { host, close } = modal({ title,
+    bodyHTML: `<form id="frm" class="grid2" novalidate>${fields.map(f=>fieldHTML(f, values[f.k])).join("")}<div class="err fld full" id="ferr" hidden></div><button type="submit" hidden></button></form>`,
+    footHTML: `${extraFoot}<span style="flex:1"></span><button class="btn" data-mclose type="button">Cancelar</button><button class="btn primary" id="fsave" type="button">${esc(submit)}</button>` });
+  const form = $("#frm", host), err = $("#ferr", host);
+  const read = () => { const o={}; for (const f of fields){ const el=form.elements[f.k]; let v=el.value.trim(); if (f.type==="number") v = numSimple(v); o[f.k]=v; } return o; };
+  const go = async () => {
+    const vals = read(); err.hidden = true;
+    for (const f of fields){
+      if (f.req && (vals[f.k]===""||vals[f.k]===null)) { err.textContent=`Completá “${f.label}”.`; err.hidden=false; form.elements[f.k].focus(); return; }
+      if (f.type==="number" && Number.isNaN(vals[f.k])) { err.textContent=`“${f.label}” tiene que ser un número, por ejemplo 60000 o 50,5.`; err.hidden=false; form.elements[f.k].focus(); return; }
+    }
+    const btn = $("#fsave", host); btn.disabled = true;
+    try { const msg = await onSubmit(vals, close); if (msg===false){ btn.disabled=false; return; } close(); if (typeof msg==="string") toast(msg); }
+    catch(e){ btn.disabled=false; err.textContent = writeErr(e); err.hidden=false; }
+  };
+  $("#fsave", host).addEventListener("click", go);
+  form.addEventListener("submit", e => { e.preventDefault(); go(); });
+  after?.(host, form, err);
+  return host;
+}
+function writeErr(e){
+  if (e?.code==="invalid_argument") return "No se pudo guardar: no tenés permiso para modificar estos datos, o algún valor no es válido.";
+  if (e?.code==="quota_exceeded") return "No se pudo guardar: se llenó el espacio de datos. Borrá movimientos viejos para liberar lugar.";
+  if (e?.code==="resource_exhausted") return "Demasiados cambios seguidos. Esperá unos segundos y volvé a intentar.";
+  return "No se pudo guardar. Revisá tu conexión y volvé a intentar.";
+}
+async function confirmBox(title, text, okLabel="Eliminar"){
+  return new Promise(res => {
+    const { host, close } = modal({ title, bodyHTML:`<p style="margin:0">${text}</p>`, footHTML:`<button class="btn" data-mclose type="button">Cancelar</button><button class="btn danger solid" id="cok" type="button">${esc(okLabel)}</button>` });
+    let done=false;
+    $("#cok",host).addEventListener("click",()=>{ done=true; close(); res(true); });
+    new MutationObserver((m,o)=>{ if(!host.isConnected){ o.disconnect(); if(!done) res(false);} }).observe(document.body,{childList:true});
+  });
+}
+
+const clientOpts = () => clientesArr().map(c=>[c.id, `${c.codigo} · ${c.nombre}`]);
+const sinDemo = o => { const r={...o}; return r; };
+
+function formCliente(id){
+  const c = id ? S.clientes.get(id) : null;
+  const nextCode = (() => { let n=1; const set=new Set([...S.clientes.values()].map(x=>String(x.codigo).toUpperCase())); while(set.has("C"+String(n).padStart(3,"0"))) n++; return "C"+String(n).padStart(3,"0"); })();
+  openForm({ title: c ? "Editar cliente" : "Nuevo cliente", submit: c ? "Guardar cambios" : "Agregar cliente",
+    values: c ? {...c, tipoCobro:c.tipoCobro||"Fijo", porcentaje:c.porcentaje??10} : { codigo: nextCode, estado:"Activo", moneda:"ARS", diaCobro:10, alta: todayISO, tipoCobro:"Fijo", porcentaje:10 },
+    fields: [
+      {k:"codigo", label:"Código", req:true, ro:!!c, hint: c ? "El código no se puede cambiar." : "Identificador corto. Usá el mismo como tenant en OpenObserve."},
+      {k:"nombre", label:"Nombre del cliente", req:true},
+      {k:"contacto", label:"Persona de contacto"},
+      {k:"telefono", label:"Teléfono / WhatsApp", ph:"+54 9 351 555-0000"},
+      {k:"plan", label:"Plan", ph:"Básico, Pro…"},
+      {k:"tipoCobro", label:"Cómo le cobrás", type:"select", options:["Fijo","Comisión","Fijo + comisión"], full:true},
+      {k:"cuota", label:"Cuota mensual fija", type:"number", hint:"Dejalo en 0 si solo cobrás comisión."},
+      {k:"porcentaje", label:"Comisión sobre ventas (%)", type:"number", hint:"Solo se usa si cobrás comisión."},
+      {k:"moneda", label:"Moneda", type:"select", options:["ARS","USD"]},
+      {k:"diaCobro", label:"Día de cobro", type:"number", hint:"Del 1 al 28 para que exista todos los meses."},
+      {k:"estado", label:"Estado", type:"select", options:["Activo","Prueba","Suspendido","Baja"]},
+      {k:"alta", label:"Fecha de alta", type:"date"},
+      {k:"panelUrl", label:"URL del panel", full:true, ph:"https://cliente.tudominio.com/admin"},
+      {k:"tenant", label:"Tenant en OpenObserve", ph:"Si lo dejás vacío se usa el código", full:true},
+      {k:"notas", label:"Notas", type:"textarea", full:true},
+    ],
+    onSubmit: async (v) => {
+      const codigo = String(v.codigo).trim().toUpperCase();
+      if (!/^[A-Z0-9_-]{1,40}$/.test(codigo)) { $("#ferr").textContent="El código solo puede tener letras, números, guiones y guiones bajos, sin espacios."; $("#ferr").hidden=false; return false; }
+      const docId = c ? c.id : codigo;
+      if (!c && S.clientes.has(docId)) { $("#ferr").textContent=`Ya existe un cliente con el código ${codigo}.`; $("#ferr").hidden=false; return false; }
+      const dia = v.diaCobro==null ? null : Math.max(1, Math.min(31, Math.round(v.diaCobro)));
+      const body = { codigo, nombre:v.nombre, contacto:v.contacto, telefono:v.telefono, plan:v.plan, cuota:v.cuota??0, tipoCobro:v.tipoCobro, porcentaje:v.porcentaje??10, moneda:v.moneda, diaCobro:dia, estado:v.estado, alta:v.alta, panelUrl:v.panelUrl, tenant:v.tenant, notas:v.notas };
+      if (c?.demo) body.demo = true;
+      await S.db.collection("clientes").doc(docId).set(body);
+      return c ? "Cliente actualizado" : `Cliente ${codigo} agregado`;
+    }
+  });
+}
+
+function formPago(pagoId, clienteId){
+  const p = pagoId ? S.pagos.get(pagoId) : null;
+  if (!S.clientes.size){ toast("Primero agregá un cliente"); return; }
+  const cid = p?.clienteId || clienteId || clientesArr()[0].id;
+  openForm({ title: p ? "Editar pago" : "Registrar pago", submit: p ? "Guardar cambios" : "Registrar pago",
+    values: p || { clienteId: cid, fecha: todayISO, medio:"Transferencia" },
+    extraFoot: p ? `<button class="btn danger" type="button" id="del">Eliminar pago</button>` : "",
+    fields: [
+      {k:"clienteId", label:"Cliente", type:"select", options:clientOpts(), req:true, full:true},
+      {k:"fecha", label:"Fecha", type:"date", req:true},
+      {k:"monto", label:"Monto", type:"number", req:true, hint:""},
+      {k:"medio", label:"Medio", type:"select", options:["Transferencia","Efectivo","Mercado Pago","Cripto","Otro"]},
+      {k:"nota", label:"Nota / comprobante", ph:"Ej: comprobante por WhatsApp"},
+    ],
+    after: (host, form) => {
+      const upd = () => { const id=form.elements.clienteId.value, st=stats(id); const h=$("#h_monto",host); if(h) h.textContent = `En ${st.cur}. Saldo actual: ${fmtMoney(st.saldo, st.cur)}`; if(!p && !form.elements.monto.value && st.saldo>0) form.elements.monto.placeholder = String(st.saldo).replace(".",","); };
+      form.elements.clienteId.addEventListener("change", upd); upd();
+      $("#del",host)?.addEventListener("click", async ()=>{ host.remove(); if (await confirmBox("Eliminar pago", `Se elimina el pago de ${esc(fmtMoney(p.monto, S.clientes.get(p.clienteId)?.moneda))} del ${fmtDate(p.fecha)}. El saldo del cliente vuelve a subir.`)) { try{ await S.db.collection("pagos").doc(p.id).delete(); toast("Pago eliminado"); }catch(e){ toast(writeErr(e)); } } });
+    },
+    onSubmit: async (v) => {
+      if (v.monto<=0) { $("#ferr").textContent="El monto tiene que ser mayor a cero."; $("#ferr").hidden=false; return false; }
+      const ref = p ? S.db.collection("pagos").doc(p.id) : S.db.collection("pagos").doc();
+      const body = { clienteId:v.clienteId, fecha:v.fecha, monto:v.monto, medio:v.medio, nota:v.nota }; if (p?.demo) body.demo=true;
+      await ref.set(body);
+      return p ? "Pago actualizado" : `Pago registrado: ${fmtMoney(v.monto, S.clientes.get(v.clienteId)?.moneda)}`;
+    }
+  });
+}
+
+function formCargo(cargoId, clienteId){
+  const x = cargoId ? S.cargos.get(cargoId) : null;
+  if (!S.clientes.size){ toast("Primero agregá un cliente"); return; }
+  const cid = x?.clienteId || clienteId || clientesArr()[0].id;
+  openForm({ title: x ? "Editar cargo" : "Nuevo cargo", submit: x ? "Guardar cambios" : "Agregar cargo",
+    values: x || { clienteId: cid, fecha: todayISO, periodo: curPeriod, concepto:"Cuota mensual", monto: S.clientes.get(cid)?.cuota ?? "" },
+    extraFoot: x ? `<button class="btn danger" type="button" id="del">Eliminar cargo</button>` : "",
+    fields: [
+      {k:"clienteId", label:"Cliente", type:"select", options:clientOpts(), req:true, full:true},
+      {k:"concepto", label:"Concepto", req:true, full:true, ph:"Cuota mensual, módulo extra, ajuste…"},
+      {k:"fecha", label:"Fecha", type:"date", req:true},
+      {k:"periodo", label:"Período", type:"month"},
+      {k:"monto", label:"Monto", type:"number", req:true, hint:"", full:true},
+    ],
+    after: (host, form) => {
+      const upd = () => { const c=S.clientes.get(form.elements.clienteId.value); const h=$("#h_monto",host); if(h) h.textContent=`En ${c?.moneda||"ARS"}. Para un descuento o bonificación, cargá un monto negativo.`; };
+      form.elements.clienteId.addEventListener("change", () => { upd(); if(!x){ const c=S.clientes.get(form.elements.clienteId.value); if(c && form.elements.concepto.value==="Cuota mensual") form.elements.monto.value=String(c.cuota??"").replace(".",","); } }); upd();
+      $("#del",host)?.addEventListener("click", async ()=>{ host.remove(); if (await confirmBox("Eliminar cargo", `Se elimina “${esc(x.concepto)}” por ${esc(fmtMoney(x.monto, S.clientes.get(x.clienteId)?.moneda))}. El saldo del cliente baja en ese monto.`)) { try{ await S.db.collection("cargos").doc(x.id).delete(); toast("Cargo eliminado"); }catch(e){ toast(writeErr(e)); } } });
+    },
+    onSubmit: async (v) => {
+      const ref = x ? S.db.collection("cargos").doc(x.id) : S.db.collection("cargos").doc();
+      const body = { clienteId:v.clienteId, fecha:v.fecha, periodo:v.periodo, concepto:v.concepto, monto:v.monto }; if (x?.demo) body.demo=true; if (x?.tipo) Object.assign(body,{tipo:x.tipo, ventas:x.ventas??null, porcentaje:x.porcentaje??null});
+      await ref.set(body);
+      return x ? "Cargo actualizado" : "Cargo agregado";
+    }
+  });
+}
+
+function formGenerar(){
+  const pending = per => clientesArr().filter(c => c.estado==="Activo" && (c.tipoCobro||"Fijo")!=="Comisión" && Number(c.cuota)>0 && !S.cargos.has(`${c.id}_${per}`));
+  openForm({ title:"Generar cuotas del mes", submit:"Generar cuotas",
+    values:{ periodo: curPeriod },
+    fields:[{k:"periodo", label:"Período", type:"month", req:true, full:true, hint:""}],
+    after:(host, form)=>{
+      const upd=()=>{ const per=form.elements.periodo.value; const list=pending(per); const h=$("#h_periodo",host);
+        h.textContent = list.length ? `Se va a cargar la cuota a ${list.length} cliente${list.length===1?"":"s"} activo${list.length===1?"":"s"}: ${list.map(c=>c.codigo).join(", ")}. Los que ya tienen la cuota de ${periodLabel(per)} se saltean.` : `Todos los clientes con cuota fija ya tienen la de ${periodLabel(per)}.`; h.textContent += " Las comisiones se cargan aparte, con “Cargar comisión”."; };
+      form.elements.periodo.addEventListener("input", upd); upd();
+    },
+    onSubmit: async (v)=>{
+      const per=v.periodo, list=pending(per);
+      if (!list.length) return "No había cuotas para generar";
+      const [y,m]=per.split("-").map(Number); const last=new Date(Date.UTC(y,m,0)).getUTCDate();
+      for (const c of list){
+        const d = Math.min(Number(c.diaCobro)||1, last);
+        await S.db.collection("cargos").doc(`${c.id}_${per}`).set({ clienteId:c.id, fecha:`${per}-${pad(d)}`, periodo:per, concepto:"Cuota mensual", monto:Number(c.cuota)||0 });
+      }
+      return `${list.length} cuota${list.length===1?"":"s"} generada${list.length===1?"":"s"} para ${periodLabel(per)}`;
+    }
+  });
+}
+
+function formComision(clienteId){
+  const opts = clientesArr().filter(c => (c.tipoCobro||"Fijo")!=="Fijo");
+  if (!opts.length){ toast("Ningún cliente cobra por comisión. Cambialo en su ficha, en “Cómo le cobrás”."); return; }
+  const prev = addMonths(curPeriod+"-01", -1).slice(0,7);
+  const cid = opts.some(c=>c.id===clienteId) ? clienteId : opts[0].id;
+  openForm({ title:"Cargar comisión", submit:"Cargar comisión",
+    values:{ clienteId:cid, periodo:prev, porcentaje:pctOf(S.clientes.get(cid)), fecha:todayISO },
+    fields:[
+      {k:"clienteId", label:"Cliente", type:"select", options:opts.map(c=>[c.id, `${c.codigo} · ${c.nombre}`]), req:true, full:true},
+      {k:"periodo", label:"Mes de las ventas", type:"month", req:true},
+      {k:"fecha", label:"Fecha del cargo", type:"date", req:true},
+      {k:"ventas", label:"Total vendido en el mes", type:"number", req:true},
+      {k:"porcentaje", label:"Comisión (%)", type:"number", req:true, hint:""},
+    ],
+    after:(host, form)=>{
+      const upd=()=>{ const c=S.clientes.get(form.elements.clienteId.value), v=numSimple(form.elements.ventas.value), pc=numSimple(form.elements.porcentaje.value), per=form.elements.periodo.value;
+        const exists = S.cargos.has(`${c.id}_${per}_com`);
+        $("#h_porcentaje",host).textContent = (v>0 && pc>0 ? `Comisión a cobrar: ${fmtMoney(Math.round(v*pc)/100, c.moneda)}.` : `Ingresá lo vendido para ver la comisión. Moneda: ${c.moneda||"ARS"}.`) + (exists?` Ya hay una comisión de ${periodLabel(per)} para este cliente: se reemplaza.`:""); };
+      form.elements.clienteId.addEventListener("change",()=>{ form.elements.porcentaje.value=String(pctOf(S.clientes.get(form.elements.clienteId.value))).replace(".",","); upd(); });
+      ["ventas","porcentaje","periodo"].forEach(k=>form.elements[k].addEventListener("input",upd)); upd();
+    },
+    onSubmit: async (v)=>{
+      if (v.ventas<0 || v.porcentaje<=0){ $("#ferr").textContent="Revisá las ventas y el porcentaje."; $("#ferr").hidden=false; return false; }
+      const c=S.clientes.get(v.clienteId), monto=Math.round(v.ventas*v.porcentaje)/100;
+      await S.db.collection("cargos").doc(`${c.id}_${v.periodo}_com`).set({ clienteId:c.id, fecha:v.fecha, periodo:v.periodo, tipo:"comision", ventas:v.ventas, porcentaje:v.porcentaje,
+        concepto:`Comisión ${v.porcentaje.toLocaleString("es-AR")}% sobre ventas de ${fmtMoney(v.ventas, c.moneda)}`, monto });
+      return `Comisión cargada: ${fmtMoney(monto, c.moneda)}`;
+    }
+  });
+}
+
+function formServidor(srvId, clienteId){
+  const s = srvId ? S.servidores.get(srvId) : null;
+  if (!S.clientes.size){ toast("Primero agregá un cliente"); return; }
+  openForm({ title: s ? "Editar servidor" : "Nuevo servidor", submit: s ? "Guardar cambios" : "Agregar servidor",
+    values: s || { clienteId: clienteId || clientesArr()[0].id, moneda:"USD" },
+    extraFoot: s ? `<button class="btn danger" type="button" id="del">Eliminar servidor</button>` : "",
+    fields:[
+      {k:"clienteId", label:"Cliente", type:"select", options:clientOpts(), req:true, full:true},
+      {k:"proveedor", label:"Proveedor", ph:"Hetzner, DigitalOcean…", req:true},
+      {k:"plan", label:"Plan VPS", ph:"CX22"},
+      {k:"host", label:"Host / IP"},
+      {k:"costo", label:"Costo mensual", type:"number", req:true},
+      {k:"moneda", label:"Moneda", type:"select", options:["USD","ARS"]},
+      {k:"renovacion", label:"Próxima renovación", type:"date"},
+      {k:"dominio", label:"Dominio"},
+      {k:"venceDominio", label:"Vence el dominio", type:"date"},
+      {k:"notas", label:"Notas", type:"textarea", full:true},
+    ],
+    after:(host)=>{ $("#del",host)?.addEventListener("click", async ()=>{ host.remove(); if (await confirmBox("Eliminar servidor", `Se elimina el servidor ${esc(s.proveedor||"")} ${esc(s.host||"")} de ${esc(nameOf(s.clienteId))}.`)) { try{ await S.db.collection("servidores").doc(s.id).delete(); toast("Servidor eliminado"); }catch(e){ toast(writeErr(e)); } } }); },
+    onSubmit: async (v)=>{
+      const ref = s ? S.db.collection("servidores").doc(s.id) : S.db.collection("servidores").doc();
+      const body = {...v}; if (s?.demo) body.demo=true;
+      await ref.set(body);
+      return s ? "Servidor actualizado" : "Servidor agregado";
+    }
+  });
+}
+
+function recordatorio(id){
+  const c=S.clientes.get(id); if(!c) return; const st=stats(id);
+  const nombre = (c.contacto||"").split(" ")[0] || c.nombre;
+  const txt = st.saldo>0
+    ? `Hola ${nombre}, ¿cómo estás? Te escribo por el servicio de ${c.nombre}. Figura un saldo pendiente de ${fmtMoney(st.saldo, st.cur)}${st.ultimo?` (último pago registrado el ${fmtDate(st.ultimo)})`:""}. Cuando puedas, avisame cuando lo transfieras así lo registro. ¡Gracias!`
+    : `Hola ${nombre}, ¿cómo estás? Te recuerdo que el pago de ${c.nombre} vence el día ${c.diaCobro||"de cobro"}. ¡Gracias!`;
+  const phone = String(c.telefono||"").replace(/\D/g,"");
+  const { host } = modal({ title:`Recordatorio para ${c.nombre}`,
+    bodyHTML:`<div class="fld"><label for="rtxt">Mensaje</label><textarea class="field" id="rtxt" style="min-height:130px">${esc(txt)}</textarea></div>
+      <div class="hint" style="font-size:12px;color:var(--muted)">${phone?`Teléfono: <span class="mono" style="user-select:all">${esc(c.telefono)}</span>`:"Este cliente no tiene teléfono cargado."}</div>`,
+    footHTML:`${phone?`<a class="btn" id="wa" href="https://wa.me/${phone}?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">Abrir WhatsApp ↗</a>`:""}<span style="flex:1"></span><button class="btn primary" id="copy" type="button">Copiar mensaje</button>` });
+  const ta=$("#rtxt",host);
+  ta.addEventListener("input",()=>{ const a=$("#wa",host); if(a) a.href=`https://wa.me/${phone}?text=${encodeURIComponent(ta.value)}`; });
+  $("#copy",host).addEventListener("click",()=>{ navigator.clipboard?.writeText(ta.value).then(()=>toast("Mensaje copiado")).catch(()=>{ ta.select(); toast("Seleccioné el texto: copialo con Ctrl+C"); }) ?? (ta.select(), toast("Seleccioné el texto: copialo con Ctrl+C")); });
+}
+
+async function renovar(id, years){
+  const s=S.servidores.get(id); if(!s) return;
+  const field = years ? "venceDominio" : "renovacion";
+  const base = s[field] || todayISO;
+  const next = addMonths(base, years ? 12 : 1);
+  try { await S.db.collection("servidores").doc(id).update({ [field]: next }); toast(`${years?"Dominio":"Renovación"} movido al ${fmtDate(next)}`); } catch(e){ toast(writeErr(e)); }
+}
+
+async function borrarCliente(id){
+  const c=S.clientes.get(id); if(!c) return;
+  const cg=[...S.cargos.values()].filter(x=>x.clienteId===id), pg=[...S.pagos.values()].filter(x=>x.clienteId===id), sv=[...S.servidores.values()].filter(x=>x.clienteId===id);
+  if (!await confirmBox(`Eliminar ${c.nombre}`, `Se eliminan el cliente y todo su historial: ${cg.length} cargo${cg.length===1?"":"s"}, ${pg.length} pago${pg.length===1?"":"s"} y ${sv.length} servidor${sv.length===1?"":"es"}. No se puede deshacer.`)) return;
+  try {
+    for (const x of cg) await S.db.collection("cargos").doc(x.id).delete();
+    for (const x of pg) await S.db.collection("pagos").doc(x.id).delete();
+    for (const x of sv) await S.db.collection("servidores").doc(x.id).delete();
+    await S.db.collection("clientes").doc(id).delete();
+    closeLayer(); toast(`${c.nombre} eliminado`);
+  } catch(e){ toast(writeErr(e)); }
+}
+async function borrarDemo(){
+  const groups = ["cargos","pagos","servidores","clientes"].map(k=>[k,[...S[k].values()].filter(x=>x.demo)]);
+  const n = groups.reduce((a,[,l])=>a+l.length,0);
+  if (!await confirmBox("Borrar datos de ejemplo", `Se eliminan ${n} registros marcados como ejemplo (clientes, cargos, pagos y servidores de prueba). Tus datos reales no se tocan.`, "Borrar ejemplos")) return;
+  try { for (const [k,l] of groups) for (const x of l) await S.db.collection(k).doc(x.id).delete(); toast("Datos de ejemplo borrados"); } catch(e){ toast(writeErr(e)); }
+}
+
+// ---------- events ----------
+document.addEventListener("click", e => {
+  const close = e.target.closest("[data-close]");
+  if (close && (e.target===close || close.tagName==="BUTTON")) { closeLayer(); return; }
+  const el = e.target.closest("[data-a]"); if(!el) return;
+  const a = el.dataset.a, id = el.dataset.id;
+  if (el.tagName==="TR" && e.target.closest("button,a")) return;
+  ({
+    "abrir": ()=>openDrawer(id),
+    "nuevo-cliente": ()=>formCliente(),
+    "editar-cliente": ()=>formCliente(id),
+    "borrar-cliente": ()=>borrarCliente(id),
+    "pago": ()=>formPago(null, id),
+    "editar-pago": ()=>formPago(id),
+    "cargo": ()=>formCargo(null, id),
+    "editar-cargo": ()=>formCargo(id),
+    "generar": ()=>formGenerar(),
+    "comision": ()=>formComision(id),
+    "nuevo-srv": ()=>formServidor(null, id),
+    "editar-srv": ()=>formServidor(id),
+    "renovar": ()=>renovar(id,0),
+    "renovar-dom": ()=>renovar(id,1),
+    "recordar": ()=>recordatorio(id),
+    "borrar-demo": ()=>borrarDemo(),
+  })[a]?.();
+});
+document.addEventListener("keydown", e => { if (e.key==="Escape" && drawerId && !document.querySelector(".overlay:not(.side)")) closeLayer(); });
+document.addEventListener("input", e => {
+  if (e.target.id==="q"){ filters.q=e.target.value; const pos=e.target.selectionStart; render(); const q=$("#q"); q.focus(); try{q.setSelectionRange(pos,pos);}catch{} }
+});
+document.addEventListener("change", e => {
+  if (e.target.id==="mCliente"){ filters.mCliente=e.target.value; render(); }
+  if (e.target.id==="mTipo"){ filters.mTipo=e.target.value; render(); }
+});
+const tcInput = $("#tc");
+tcInput.addEventListener("change", async () => {
+  const v = numSimple(tcInput.value);
+  if (!v || v<=0 || Number.isNaN(v)) { tcInput.value = tc().toLocaleString("es-AR"); toast("El tipo de cambio tiene que ser un número mayor a cero"); return; }
+  if (v===tc()) return;
+  try { await S.db.doc("config/general").set({ tipoCambio:v }); toast(`Tipo de cambio: ${fmtMoney(v)}`); } catch(e){ toast(writeErr(e)); tcInput.value = tc().toLocaleString("es-AR"); }
+});
+tcInput.addEventListener("keydown", e => { if(e.key==="Enter") tcInput.blur(); });
+
+// ---------- datos: Supabase ----------
+function mapErr(e){
+  const m = String(e?.message||"");
+  if (e?.code==="42501" || /row-level security|permission/i.test(m)) return {code:"invalid_argument", message:m};
+  if (/JWT|expired|session/i.test(m)) return {code:"revoked", message:m};
+  return {code:"unavailable", message:m};
+}
+function makeStore(sb){
+  const T = "registros";
+  const cache = new Map(), colL = new Map(), docL = new Map();
+  let loaded = false;
+  const col = k => { if(!cache.has(k)) cache.set(k,new Map()); return cache.get(k); };
+  const snapCol = k => ({ docs:[...col(k).entries()].map(([id,d])=>({ id, exists:true, data:()=>d })) });
+  const snapDoc = (k,id) => { const d=col(k).get(id); return { id, exists:d!==undefined, data:()=>d }; };
+  function emit(k, id){
+    colL.get(k)?.forEach(fn=>fn(snapCol(k)));
+    if (id!=null) docL.get(k+"/"+id)?.forEach(fn=>fn(snapDoc(k,id)));
+    else for (const [p,set] of docL) if (p.startsWith(k+"/")) set.forEach(fn=>fn(snapDoc(k,p.slice(k.length+1))));
+  }
+  const chk = r => { if (r.error) throw mapErr(r.error); };
+  const listen = (map, key, fn, first) => { if(!map.has(key)) map.set(key,new Set()); map.get(key).add(fn); if(loaded) fn(first()); return ()=>map.get(key).delete(fn); };
+  function ref(k, id){ return {
+    id,
+    async set(data){ chk(await sb.from(T).upsert({ collection:k, id, data, updated_at:new Date().toISOString() }, { onConflict:"owner,collection,id" })); col(k).set(id,data); emit(k,id); },
+    async update(p){ const cur=col(k).get(id); if(!cur) throw {code:"invalid_argument", message:"no existe"}; await this.set({...cur, ...p}); },
+    async delete(){ chk(await sb.from(T).delete().eq("collection",k).eq("id",id)); col(k).delete(id); emit(k,id); },
+    onSnapshot(fn){ return listen(docL, k+"/"+id, fn, ()=>snapDoc(k,id)); }
+  }; }
+  return {
+    collection(k){ return { doc:id=>ref(k, id || crypto.randomUUID()), onSnapshot(fn){ return listen(colL, k, fn, ()=>snapCol(k)); } }; },
+    doc(path){ const [k,id]=path.split("/"); return ref(k,id); },
+    async load(){
+      cache.clear(); const page=1000;
+      for (let from=0;;from+=page){ const r=await sb.from(T).select("collection,id,data").range(from, from+page-1); chk(r); for (const x of r.data) col(x.collection).set(x.id, x.data); if (r.data.length<page) break; }
+      loaded = true;
+      for (const k of new Set([...cache.keys(), ...colL.keys(), ...[...docL.keys()].map(p=>p.split("/")[0])])) emit(k);
+    },
+    live(){
+      return sb.channel("registros-live").on("postgres_changes", { event:"*", schema:"public", table:T }, ({ eventType, new:n, old:o }) => {
+        if (eventType==="DELETE"){ if (o?.collection){ col(o.collection).delete(o.id); emit(o.collection, o.id); } }
+        else if (n?.collection){ col(n.collection).set(n.id, n.data); emit(n.collection, n.id); }
+      }).subscribe();
+    }
+  };
+}
+
+// ---------- ingreso ----------
+function showState(title, text){ $("#app").innerHTML = `<div class="state"><h2>${esc(title)}</h2><p>${text}</p></div>`; }
+function showLogin(sb){
+  $("#app").innerHTML = `<form class="login" id="lf" novalidate>
+    <h2>Ingresar</h2><p>Entrá con el usuario que creaste en Supabase.</p>
+    <div class="fld"><label for="le">Email</label><input class="field" id="le" type="email" autocomplete="username" required></div>
+    <div class="fld"><label for="lp">Contraseña</label><input class="field" id="lp" type="password" autocomplete="current-password" required></div>
+    <div class="err" id="lerr" hidden></div>
+    <button class="btn primary" type="submit" id="lb">Entrar</button></form>`;
+  setTimeout(()=>$("#le")?.focus(), 30);
+  $("#lf").addEventListener("submit", async e => {
+    e.preventDefault(); const err=$("#lerr"), b=$("#lb"); err.hidden=true; b.disabled=true;
+    const { data, error } = await sb.auth.signInWithPassword({ email:$("#le").value.trim(), password:$("#lp").value });
+    b.disabled=false;
+    if (error){ err.textContent = /invalid/i.test(error.message) ? "Email o contraseña incorrectos." : "No se pudo ingresar. Revisá tu conexión y volvé a intentar."; err.hidden=false; return; }
+    start(sb, data.session);
+  });
+}
+
+// ---------- boot ----------
+let started = false;
+async function start(sb, session){
+  if (started) return; started = true;
+  $("#app").innerHTML = `<div class="state"><h2>Cargando tu cartera…</h2><p>Clientes, cobros y servidores aparecen acá en unos segundos.</p></div>`;
+  $("#who").textContent = session.user.email || ""; $("#logout").hidden = false;
+  const db = makeStore(sb); S.db = db; S.canWrite = true; tcInput.disabled = false;
+  for (const k of ["clientes","cargos","pagos","servidores"]){
+    db.collection(k).onSnapshot(snap => {
+      const m = new Map(); for (const d of snap.docs) m.set(d.id, { id:d.id, ...d.data() });
+      S[k] = m; S.loaded.add(k); render();
+    });
+  }
+  db.doc("config/general").onSnapshot(d => { if (d.exists && d.data().tipoCambio) S.config.tipoCambio = d.data().tipoCambio; if (document.activeElement!==tcInput) tcInput.value = tc().toLocaleString("es-AR"); render(); });
+  try { await db.load(); db.live(); }
+  catch(e){ showState("No se pudieron leer los datos", "Revisá que hayas corrido <b>schema.sql</b> en Supabase y que tu sesión siga activa."); }
+}
+(async () => {
+  setView(location.hash.slice(1));
+  tcInput.disabled = true; tcInput.value = tc().toLocaleString("es-AR");
+  const cfg = window.APP_CONFIG || {};
+  if (!window.supabase){ showState("No se pudo cargar la app", "Falta la librería de Supabase. Revisá tu conexión a internet."); return; }
+  if (!cfg.supabaseUrl || !cfg.supabaseAnonKey){ showState("Falta configurar Supabase", "Completá <b>config.js</b> con la URL y la clave pública (anon key) de tu proyecto de Supabase."); return; }
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  $("#logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+  sb.auth.onAuthStateChange(ev => { if (ev==="SIGNED_OUT") location.reload(); });
+  const { data:{ session } } = await sb.auth.getSession();
+  if (session) start(sb, session); else showLogin(sb);
+})();
+})();
+</script>
+</body>
+</html>

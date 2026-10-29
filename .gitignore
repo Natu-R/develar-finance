@@ -1,0 +1,6 @@
+# Datos reales de clientes: nunca al repo (es público)
+supabase/datos*.sql
+*.csv
+.vercel
+.env*
+node_modules
