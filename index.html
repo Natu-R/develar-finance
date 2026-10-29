@@ -239,6 +239,21 @@ function stats(id){
   let costo=0; for (const s of S.servidores.values()) if (s.clienteId===id) costo += toARS(s.costo, s.moneda);
   return { cargado, pagado, saldo, ultimo, dias, estadoPago, ingreso, costo, margen: ingreso-costo, cur, tipo, usaCom, comEst, comN };
 }
+// Estado de cada cargo: primero cuentan los pagos aplicados a ese cargo; los pagos "a cuenta" se reparten del más viejo al más nuevo.
+function estadosCargos(cid){
+  const cargos=[...S.cargos.values()].filter(x=>x.clienteId===cid).sort((a,b)=>(a.fecha||"").localeCompare(b.fecha||"")||String(a.id).localeCompare(String(b.id)));
+  const linked=new Map(); let pool=0;
+  for (const p of S.pagos.values()) if (p.clienteId===cid){ const m=Number(p.monto)||0; if (p.cargoId && S.cargos.has(p.cargoId)) linked.set(p.cargoId,(linked.get(p.cargoId)||0)+m); else pool+=m; }
+  const out=new Map();
+  for (const c of cargos){ const monto=Number(c.monto)||0;
+    if (monto<=0){ pool+=-monto; out.set(c.id,{monto, falta:0, estado:"cobrado"}); continue; }
+    let falta=monto-(linked.get(c.id)||0); if (falta<0){ pool+=-falta; falta=0; } out.set(c.id,{monto, falta}); }
+  for (const c of cargos){ const e=out.get(c.id); if (e.estado) continue;
+    const t=Math.min(pool,e.falta); pool-=t; e.falta=Math.round((e.falta-t)*100)/100;
+    e.estado = e.falta<=0.005 ? "cobrado" : e.falta<e.monto ? "parcial" : "pendiente"; }
+  return out;
+}
+const cargoPill = (e, cur) => !e ? "" : e.estado==="cobrado" ? `<span class="pill ok">Cobrado</span>` : e.estado==="parcial" ? `<span class="pill warn">Falta ${fmtMoney(e.falta,cur)}</span>` : `<span class="pill">Pendiente</span>`;
 const pctOf = c => Number(c?.porcentaje)||10;
 function cobroLabel(c){
   const t = c?.tipoCobro || "Fijo";
@@ -364,14 +379,15 @@ function vMovimientos(){
   const f = items.filter(x => (!filters.mCliente || x.clienteId===filters.mCliente) && (!filters.mTipo || x.tipo===filters.mTipo))
     .sort((a,b)=> (b.fecha||"").localeCompare(a.fecha||"") || (a.tipo===b.tipo?0:a.tipo==="p"?-1:1));
   const opts = clientesArr().map(c=>`<option value="${esc(c.id)}" ${filters.mCliente===c.id?"selected":""}>${esc(c.codigo)} · ${esc(c.nombre)}</option>`).join("");
-  const rows = f.map(x => { const cur=S.clientes.get(x.clienteId)?.moneda||"ARS"; return `
+  const estC = new Map(); const estOf = x => { if(!estC.has(x.clienteId)) estC.set(x.clienteId, estadosCargos(x.clienteId)); return estC.get(x.clienteId).get(x.id); };
+  const rows = f.map(x => { const cur=S.clientes.get(x.clienteId)?.moneda||"ARS"; const e = x.tipo==="c" ? estOf(x) : null; const ap = x.tipo==="p" && x.cargoId ? S.cargos.get(x.cargoId) : null; return `
     <tr>
       <td>${fmtDate(x.fecha)}</td>
       <td><span class="pill ${x.tipo==="p"?"ok":""}">${x.tipo==="p"?"Pago":"Cargo"}</span></td>
       <td>${esc(nameOf(x.clienteId))}${demoTag(x)}</td>
-      <td class="wrapcell">${x.tipo==="c" ? esc(x.concepto||"")+(x.periodo?` <span class="tag">${periodLabel(x.periodo)}</span>`:"") : esc(x.medio||"")+(x.nota?` <span class="sub">${esc(x.nota)}</span>`:"")}</td>
+      <td class="wrapcell">${x.tipo==="c" ? esc(x.concepto||"")+(x.periodo?` <span class="tag">${periodLabel(x.periodo)}</span>`:"")+`<span class="sub">${cargoPill(e,cur)}</span>` : esc(x.medio||"")+(ap?` <span class="sub">Cobro de: ${esc(ap.concepto||"")}${ap.periodo?" · "+periodLabel(ap.periodo):""}</span>`:"")+(x.nota?` <span class="sub">${esc(x.nota)}</span>`:"")}</td>
       <td class="num ${x.tipo==="p"?"pos":""}">${x.tipo==="p"?"− ":""}${fmtMoney(x.monto, cur)}</td>
-      <td>${S.canWrite?`<div class="acts"><button class="btn sm ghost" data-a="${x.tipo==="p"?"editar-pago":"editar-cargo"}" data-id="${esc(x.id)}">Editar</button></div>`:""}</td>
+      <td>${S.canWrite?`<div class="acts">${e && e.estado!=="cobrado"?`<button class="btn sm" data-a="cobrar-cargo" data-id="${esc(x.id)}">Cobrar</button>`:""}<button class="btn sm ghost" data-a="${x.tipo==="p"?"editar-pago":"editar-cargo"}" data-id="${esc(x.id)}">Editar</button></div>`:""}</td>
     </tr>`; }).join("");
   return `
   <div class="bar"><h2>Cargos y pagos</h2>
@@ -449,6 +465,20 @@ function renderDrawer(id){
           ${c.panelUrl?`<div style="grid-column:1/-1"><dt>Panel</dt><dd><a class="ext" href="${esc(c.panelUrl)}" target="_blank" rel="noopener">${esc(c.panelUrl)}</a></dd></div>`:""}
           ${c.notas?`<div style="grid-column:1/-1"><dt>Notas</dt><dd>${esc(c.notas)}</dd></div>`:""}
         </dl>
+        ${(() => {
+          const est = estadosCargos(id), per = new Map();
+          for (const x of S.cargos.values()) if (x.clienteId===id){ const k=x.periodo||(x.fecha||"").slice(0,7)||"—"; if(!per.has(k)) per.set(k,[]); per.get(k).push(x); }
+          if (!per.size) return "";
+          const keys=[...per.keys()].sort().reverse();
+          return `<section class="panel"><div class="ph"><h3>Cobros por mes</h3><span class="count">cada parte se cobra por separado</span></div>
+            <ul class="list">${keys.map(k=>{ const xs=per.get(k).sort((a,b)=>String(a.concepto).localeCompare(String(b.concepto))); const ok=xs.filter(x=>est.get(x.id)?.estado==="cobrado").length; const fin = ok===xs.length;
+              return `<li style="display:grid;gap:8px;align-items:stretch">
+                <div style="display:flex;align-items:center;gap:8px"><b style="margin-right:auto">${esc(periodLabel(k)||k)}</b>${fin?`<span class="pill ok">Finalizado</span>`:`<span class="pill warn">${ok} de ${xs.length} cobrado${xs.length===1?"":"s"}</span>`}</div>
+                ${xs.map(x=>{ const e=est.get(x.id); return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-left:10px">
+                  <span style="flex:1;min-width:140px">${esc(x.concepto||"Cargo")}</span><span class="num">${fmtMoney(x.monto,cur)}</span>${cargoPill(e,cur)}
+                  ${S.canWrite && e?.estado!=="cobrado"?`<button class="btn sm" data-a="cobrar-cargo" data-id="${esc(x.id)}">Cobrar</button>`:""}</div>`; }).join("")}
+              </li>`; }).join("")}</ul></section>`;
+        })()}
         <section class="panel">
           <div class="ph"><h3>Cuenta corriente</h3><span class="count">${mov.length} movimiento${mov.length===1?"":"s"}</span></div>
           ${mov.length?`<div style="overflow-x:auto"><table class="ledger" style="min-width:520px"><thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th class="num">Cargo</th><th class="num">Pago</th><th class="num">Saldo</th></tr></thead><tbody>${lrows}</tbody></table></div>`:`<div class="empty">Sin movimientos. Usá “Generar cuotas del mes” o agregá un cargo.</div>`}
@@ -559,15 +589,23 @@ function formCliente(id){
   });
 }
 
-function formPago(pagoId, clienteId){
+function cargoOpts(cid, keepId){
+  const est = estadosCargos(cid);
+  const xs = [...S.cargos.values()].filter(x=>x.clienteId===cid && (est.get(x.id)?.estado!=="cobrado" || x.id===keepId)).sort((a,b)=>(a.fecha||"").localeCompare(b.fecha||""));
+  const cur = S.clientes.get(cid)?.moneda;
+  return [["","A cuenta (sin elegir un cargo)"], ...xs.map(x=>[x.id, `${x.concepto||"Cargo"}${x.periodo?" · "+periodLabel(x.periodo):""} · falta ${fmtMoney(est.get(x.id)?.falta ?? x.monto, cur)}`])];
+}
+function formPago(pagoId, clienteId, cargoId){
   const p = pagoId ? S.pagos.get(pagoId) : null;
   if (!S.clientes.size){ toast("Primero agregá un cliente"); return; }
-  const cid = p?.clienteId || clienteId || clientesArr()[0].id;
+  const cg = cargoId ? S.cargos.get(cargoId) : null;
+  const cid = p?.clienteId || cg?.clienteId || clienteId || clientesArr()[0].id;
   openForm({ title: p ? "Editar pago" : "Registrar pago", submit: p ? "Guardar cambios" : "Registrar pago",
-    values: p || { clienteId: cid, fecha: todayISO, medio:"Transferencia" },
+    values: p ? {...p, cargoId:p.cargoId||""} : { clienteId: cid, fecha: todayISO, medio:"Transferencia", cargoId: cg?.id||"", monto: cg ? (estadosCargos(cid).get(cg.id)?.falta ?? "") : "" },
     extraFoot: p ? `<button class="btn danger" type="button" id="del">Eliminar pago</button>` : "",
     fields: [
       {k:"clienteId", label:"Cliente", type:"select", options:clientOpts(), req:true, full:true},
+      {k:"cargoId", label:"Qué estás cobrando", type:"select", options:cargoOpts(cid, p?.cargoId), full:true},
       {k:"fecha", label:"Fecha", type:"date", req:true},
       {k:"monto", label:"Monto", type:"number", req:true, hint:""},
       {k:"medio", label:"Medio", type:"select", options:["Transferencia","Efectivo","Mercado Pago","Cripto","Otro"]},
@@ -575,13 +613,17 @@ function formPago(pagoId, clienteId){
     ],
     after: (host, form) => {
       const upd = () => { const id=form.elements.clienteId.value, st=stats(id); const h=$("#h_monto",host); if(h) h.textContent = `En ${st.cur}. Saldo actual: ${fmtMoney(st.saldo, st.cur)}`; if(!p && !form.elements.monto.value && st.saldo>0) form.elements.monto.placeholder = String(st.saldo).replace(".",","); };
-      form.elements.clienteId.addEventListener("change", upd); upd();
+      const sel = form.elements.cargoId;
+      const fillCargos = () => { const id=form.elements.clienteId.value; sel.innerHTML = cargoOpts(id, p?.cargoId).map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join(""); };
+      form.elements.clienteId.addEventListener("change", () => { fillCargos(); upd(); });
+      sel.addEventListener("change", () => { const e = sel.value ? estadosCargos(form.elements.clienteId.value).get(sel.value) : null; if (e && !p) form.elements.monto.value = String(e.falta).replace(".",","); });
+      upd();
       $("#del",host)?.addEventListener("click", async ()=>{ host.remove(); if (await confirmBox("Eliminar pago", `Se elimina el pago de ${esc(fmtMoney(p.monto, S.clientes.get(p.clienteId)?.moneda))} del ${fmtDate(p.fecha)}. El saldo del cliente vuelve a subir.`)) { try{ await S.db.collection("pagos").doc(p.id).delete(); toast("Pago eliminado"); }catch(e){ toast(writeErr(e)); } } });
     },
     onSubmit: async (v) => {
       if (v.monto<=0) { $("#ferr").textContent="El monto tiene que ser mayor a cero."; $("#ferr").hidden=false; return false; }
       const ref = p ? S.db.collection("pagos").doc(p.id) : S.db.collection("pagos").doc();
-      const body = { clienteId:v.clienteId, fecha:v.fecha, monto:v.monto, medio:v.medio, nota:v.nota }; if (p?.demo) body.demo=true;
+      const body = { clienteId:v.clienteId, cargoId:v.cargoId||null, fecha:v.fecha, monto:v.monto, medio:v.medio, nota:v.nota }; if (p?.demo) body.demo=true;
       await ref.set(body);
       return p ? "Pago actualizado" : `Pago registrado: ${fmtMoney(v.monto, S.clientes.get(v.clienteId)?.moneda)}`;
     }
@@ -755,6 +797,7 @@ document.addEventListener("click", e => {
     "borrar-cliente": ()=>borrarCliente(id),
     "pago": ()=>formPago(null, id),
     "editar-pago": ()=>formPago(id),
+    "cobrar-cargo": ()=>formPago(null, null, id),
     "cargo": ()=>formCargo(null, id),
     "editar-cargo": ()=>formCargo(id),
     "generar": ()=>formGenerar(),
